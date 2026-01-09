@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lease Mileage Tracker</title>
+  <meta name="description" content="Track your car lease mileage and never go over your limit">
+  <meta name="theme-color" content="#0f172a">
+  
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lease Tracker">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="Lease Mileage Tracker">
+  <meta property="og:description" content="Track your car lease mileage and never go over your limit">
+  <meta property="og:type" content="website">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    /* Prevent pull-to-refresh on mobile */
+    body {
+      overscroll-behavior-y: contain;
+    }
+    /* Hide scrollbar but keep functionality */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    body {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-900">
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const LeaseTracker = () => {
+      const [leaseData, setLeaseData] = useState(null);
+      const [currentMileage, setCurrentMileage] = useState('');
+      const [mileageInput, setMileageInput] = useState('');
+      const [isEditing, setIsEditing] = useState(false);
+      const [showSetup, setShowSetup] = useState(true);
+      const [showShareModal, setShowShareModal] = useState(false);
+      const [copied, setCopied] = useState(false);
+      
+      const [setupForm, setSetupForm] = useState({
+        startDate: '',
+        endDate: '',
+        totalMiles: '',
+        startingMileage: '',
+        currentMileage: ''
+      });
+
+      useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const stored = localStorage.getItem('leaseTrackerData');
+        
+        if (params.get('start') && params.get('end') && params.get('miles')) {
+          const urlData = {
+            startDate: params.get('start'),
+            endDate: params.get('end'),
+            totalMiles: parseInt(params.get('miles')),
+            startingMileage: parseInt(params.get('startOdo') || '0')
+          };
+          
+          setSetupForm({
+            startDate: urlData.startDate,
+            endDate: urlData.endDate,
+            totalMiles: urlData.totalMiles.toString(),
+            startingMileage: urlData.startingMileage.toString(),
+            currentMileage: ''
+          });
+          
+          if (stored) {
+            const storedData = JSON.parse(stored);
+            if (storedData.startDate === urlData.startDate && 
+                storedData.endDate === urlData.endDate &&
+                storedData.totalMiles === urlData.totalMiles) {
+              setLeaseData(storedData);
+              setCurrentMileage(storedData.currentMileage);
+              setShowSetup(false);
+            }
+          }
+        } else if (stored) {
+          const storedData = JSON.parse(stored);
+          setLeaseData(storedData);
+          setCurrentMileage(storedData.currentMileage);
+          setShowSetup(false);
+        }
+      }, []);
+
+      useEffect(() => {
+        if (leaseData && currentMileage) {
+          const dataToStore = { ...leaseData, currentMileage: parseInt(currentMileage) };
+          localStorage.setItem('leaseTrackerData', JSON.stringify(dataToStore));
+        }
+      }, [leaseData, currentMileage]);
+
+      const handleSetupSubmit = (e) => {
+        e.preventDefault();
+        const data = {
+          startDate: setupForm.startDate,
+          endDate: setupForm.endDate,
+          totalMiles: parseInt(setupForm.totalMiles),
+          startingMileage: parseInt(setupForm.startingMileage) || 0
+        };
+        setLeaseData(data);
+        setCurrentMileage(setupForm.currentMileage || setupForm.startingMileage || '0');
+        setShowSetup(false);
+      };
+
+      const handleMileageUpdate = () => {
+        if (mileageInput && !isNaN(parseInt(mileageInput))) {
+          setCurrentMileage(parseInt(mileageInput));
+          setMileageInput('');
+          setIsEditing(false);
+        }
+      };
+
+      const generateShareUrl = () => {
+        if (!leaseData) return '';
+        const base = window.location.origin + window.location.pathname;
+        const params = new URLSearchParams({
+          start: leaseData.startDate,
+          end: leaseData.endDate,
+          miles: leaseData.totalMiles,
+          startOdo: leaseData.startingMileage
+        });
+        return `${base}?${params.toString()}`;
+      };
+
+      const copyShareUrl = () => {
+        navigator.clipboard.writeText(generateShareUrl());
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
+      const resetApp = () => {
+        if (confirm('This will clear all your lease data. Are you sure?')) {
+          localStorage.removeItem('leaseTrackerData');
+          setLeaseData(null);
+          setCurrentMileage('');
+          setSetupForm({
+            startDate: '',
+            endDate: '',
+            totalMiles: '',
+            startingMileage: '',
+            currentMileage: ''
+          });
+          setShowSetup(true);
+          // Clear URL params
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      };
+
+      const calculateStats = () => {
+        if (!leaseData || !currentMileage) return null;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const start = new Date(leaseData.startDate + 'T00:00:00');
+        const end = new Date(leaseData.endDate + 'T00:00:00');
+        
+        const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        const daysElapsed = Math.ceil((today - start) / (1000 * 60 * 60 * 24));
+        const daysRemaining = Math.max(0, Math.ceil((end - today) / (1000 * 60 * 60 * 24)));
+        
+        const milesUsed = parseInt(currentMileage) - leaseData.startingMileage;
+        const milesRemaining = leaseData.totalMiles - milesUsed;
+        
+        const dailyAllowanceTotal = leaseData.totalMiles / totalDays;
+        const expectedMilesUsed = dailyAllowanceTotal * daysElapsed;
+        const milesAheadBehind = expectedMilesUsed - milesUsed;
+        
+        const dailyAllowanceRemaining = daysRemaining > 0 ? milesRemaining / daysRemaining : 0;
+        
+        const percentUsed = (milesUsed / leaseData.totalMiles) * 100;
+        const percentTimeElapsed = (daysElapsed / totalDays) * 100;
+
+        return {
+          totalDays,
+          daysElapsed,
+          daysRemaining,
+          milesUsed,
+          milesRemaining,
+          dailyAllowanceTotal,
+          dailyAllowanceRemaining,
+          milesAheadBehind,
+          percentUsed,
+          percentTimeElapsed,
+          isAhead: milesAheadBehind > 0
+        };
+      };
+
+      const stats = calculateStats();
+
+      // Setup Screen
+      if (showSetup) {
+        return (
+          <div className="min-h-screen bg-slate-900 text-white p-4">
+            <div className="max-w-md mx-auto">
+              <div className="text-center mb-8 pt-8">
+                <div className="text-5xl mb-3">🚗</div>
+                <h1 className="text-2xl font-bold mb-2">Lease Mileage Tracker</h1>
+                <p className="text-slate-400 text-sm">Track your lease miles and never go over</p>
+              </div>
+              
+              <form onSubmit={handleSetupSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Lease Start Date</label>
+                  <input
+                    type="date"
+                    value={setupForm.startDate}
+                    onChange={(e) => setSetupForm({...setupForm, startDate: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Lease End Date</label>
+                  <input
+                    type="date"
+                    value={setupForm.endDate}
+                    onChange={(e) => setSetupForm({...setupForm, endDate: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Total Miles Allowed</label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 36000"
+                    value={setupForm.totalMiles}
+                    onChange={(e) => setSetupForm({...setupForm, totalMiles: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Odometer at Lease Start</label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 15 (usually low for new cars)"
+                    value={setupForm.startingMileage}
+                    onChange={(e) => setSetupForm({...setupForm, startingMileage: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Current Odometer Reading</label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 12500"
+                    value={setupForm.currentMileage}
+                    onChange={(e) => setSetupForm({...setupForm, currentMileage: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+                
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors mt-6"
+                >
+                  Start Tracking
+                </button>
+              </form>
+              
+              <p className="text-center text-slate-500 text-xs mt-8">
+                Your data stays on your device. Nothing is sent to any server.
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      // Main Dashboard
+      return (
+        <div className="min-h-screen bg-slate-900 text-white p-4 pb-8">
+          <div className="max-w-md mx-auto">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-6 pt-4">
+              <h1 className="text-xl font-bold">🚗 Lease Tracker</h1>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  title="Share"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={resetApp}
+                  className="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  title="Settings / Reset"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Current Mileage Card */}
+            <div className="bg-slate-800 rounded-2xl p-6 mb-4">
+              <div className="text-slate-400 text-sm mb-1">Current Odometer</div>
+              {isEditing ? (
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={mileageInput}
+                    onChange={(e) => setMileageInput(e.target.value)}
+                    placeholder={currentMileage.toString()}
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-2xl font-bold focus:outline-none focus:border-blue-500"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleMileageUpdate()}
+                  />
+                  <button
+                    onClick={handleMileageUpdate}
+                    className="bg-blue-600 hover:bg-blue-700 px-4 rounded-lg font-semibold transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => { setIsEditing(false); setMileageInput(''); }}
+                    className="bg-slate-700 hover:bg-slate-600 px-4 rounded-lg transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div 
+                  onClick={() => setIsEditing(true)}
+                  className="cursor-pointer group"
+                >
+                  <span className="text-4xl font-bold">{parseInt(currentMileage).toLocaleString()}</span>
+                  <span className="text-slate-400 ml-2">mi</span>
+                  <span className="text-slate-500 text-sm ml-2 opacity-0 group-hover:opacity-100 transition-opacity">tap to update</span>
+                </div>
+              )}
+            </div>
+
+            {stats && (
+              <>
+                {/* Status Banner */}
+                <div className={`rounded-2xl p-4 mb-4 ${stats.isAhead ? 'bg-emerald-900/50 border border-emerald-800' : 'bg-amber-900/50 border border-amber-800'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">
+                      {stats.isAhead ? '✨' : '⚠️'}
+                    </div>
+                    <div>
+                      <div className={`font-semibold ${stats.isAhead ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {stats.isAhead 
+                          ? `${Math.round(stats.milesAheadBehind).toLocaleString()} miles under pace` 
+                          : `${Math.round(Math.abs(stats.milesAheadBehind)).toLocaleString()} miles over pace`}
+                      </div>
+                      <div className="text-sm text-slate-300">
+                        {stats.isAhead 
+                          ? "You're doing great!" 
+                          : "Consider driving less to stay on track"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daily Allowance - Big Feature */}
+                <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 mb-4">
+                  <div className="text-blue-200 text-sm mb-1">You can drive</div>
+                  <div className="text-5xl font-bold mb-1">{Math.round(stats.dailyAllowanceRemaining).toLocaleString()}</div>
+                  <div className="text-blue-200">miles per day</div>
+                  <div className="text-blue-300 text-sm mt-2">
+                    for the next {stats.daysRemaining.toLocaleString()} days
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-slate-800 rounded-xl p-4">
+                    <div className="text-slate-400 text-xs mb-1">Miles Used</div>
+                    <div className="text-xl font-bold">{stats.milesUsed.toLocaleString()}</div>
+                    <div className="text-slate-500 text-xs">{stats.percentUsed.toFixed(1)}% of allowance</div>
+                  </div>
+                  <div className="bg-slate-800 rounded-xl p-4">
+                    <div className="text-slate-400 text-xs mb-1">Miles Left</div>
+                    <div className="text-xl font-bold">{stats.milesRemaining.toLocaleString()}</div>
+                    <div className="text-slate-500 text-xs">of {leaseData.totalMiles.toLocaleString()} total</div>
+                  </div>
+                  <div className="bg-slate-800 rounded-xl p-4">
+                    <div className="text-slate-400 text-xs mb-1">Days Remaining</div>
+                    <div className="text-xl font-bold">{stats.daysRemaining.toLocaleString()}</div>
+                    <div className="text-slate-500 text-xs">{stats.percentTimeElapsed.toFixed(1)}% elapsed</div>
+                  </div>
+                  <div className="bg-slate-800 rounded-xl p-4">
+                    <div className="text-slate-400 text-xs mb-1">Original Pace</div>
+                    <div className="text-xl font-bold">{stats.dailyAllowanceTotal.toFixed(1)}</div>
+                    <div className="text-slate-500 text-xs">mi/day average</div>
+                  </div>
+                </div>
+
+                {/* Progress Bars */}
+                <div className="bg-slate-800 rounded-xl p-4 mb-4">
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-slate-400">Time Elapsed</span>
+                      <span>{stats.percentTimeElapsed.toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-slate-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, stats.percentTimeElapsed)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-slate-400">Miles Used</span>
+                      <span>{stats.percentUsed.toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all ${
+                          stats.percentUsed > stats.percentTimeElapsed ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${Math.min(100, stats.percentUsed)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lease Details */}
+                <div className="bg-slate-800/50 rounded-xl p-4 text-sm text-slate-400">
+                  <div className="flex justify-between mb-1">
+                    <span>Lease Period</span>
+                    <span>{new Date(leaseData.startDate).toLocaleDateString()} – {new Date(leaseData.endDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Allowance</span>
+                    <span>{leaseData.totalMiles.toLocaleString()} miles</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Share Modal */}
+            {showShareModal && (
+              <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50" onClick={() => setShowShareModal(false)}>
+                <div className="bg-slate-800 rounded-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-lg font-bold mb-2">Share This Tracker</h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Share this link with others who have the same lease terms. They'll be able to track their own mileage separately.
+                  </p>
+                  <div className="bg-slate-900 rounded-lg p-3 text-xs text-slate-300 break-all mb-4 select-all">
+                    {generateShareUrl()}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={copyShareUrl}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg font-semibold transition-colors"
+                    >
+                      {copied ? '✓ Copied!' : 'Copy Link'}
+                    </button>
+                    <button
+                      onClick={() => setShowShareModal(false)}
+                      className="bg-slate-700 hover:bg-slate-600 py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<LeaseTracker />);
+  </script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
