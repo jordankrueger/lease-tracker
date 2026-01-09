@@ -28,6 +28,11 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <style>
+    /* Prevent horizontal overflow on mobile */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
     /* Prevent pull-to-refresh on mobile */
     body {
       overscroll-behavior-y: contain;
@@ -38,6 +43,17 @@
     }
     body {
       -ms-overflow-style: none;
+    }
+    /* Fix iOS date inputs overflowing */
+    input[type="date"],
+    input[type="number"] {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      min-width: 0;
+      max-width: 100%;
+      width: 100% !important;
+      box-sizing: border-box;
       scrollbar-width: none;
     }
   </style>
