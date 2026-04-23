@@ -13,9 +13,9 @@
 
 **[→ Open the live demo](https://jordankrueger.github.io/lease-tracker/)**
 
-<!-- Add a screenshot here: drop a PNG into this repo as `screenshot.png` and uncomment:
-![Screenshot](screenshot.png)
--->
+<p align="center">
+  <img src="screenshot.png" alt="Lease Mileage Tracker dashboard on iPhone showing current odometer, miles under pace, daily mileage allowance, and lease stats" width="320">
+</p>
 
 ## The problem
 
