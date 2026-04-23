@@ -1,185 +1,173 @@
-![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-deployed-brightgreen?logo=github)
-![Deploy Status](https://img.shields.io/github/deployments/jordankrueger/lease-tracker/github-pages?label=deploy&logo=github)
+# Lease Mileage Tracker
+
+> A simple, privacy-first car lease mileage tracker. See exactly how many miles per day you can drive without going over your limit. No signup, no backend, no tracking.
+
+[![Live demo](https://img.shields.io/badge/Live%20demo-jordankrueger.github.io%2Flease--tracker-blue?style=for-the-badge)](https://jordankrueger.github.io/lease-tracker/)
+
 ![PWA Ready](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa)
 ![No Backend](https://img.shields.io/badge/backend-none-blue)
+![Single HTML File](https://img.shields.io/badge/build-not%20required-success)
 ![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)
 ![Made with React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?logo=tailwindcss)
 
-# Lease Mileage Tracker
+**[→ Open the live demo](https://jordankrueger.github.io/lease-tracker/)**
 
-A simple, privacy-focused web app to track your car lease mileage. Know exactly how many miles per day you can drive without going over your limit.
+<!-- Add a screenshot here: drop a PNG into this repo as `screenshot.png` and uncomment:
+![Screenshot](screenshot.png)
+-->
 
-**[Click here for a live demo!](https://jordankrueger.github.io/lease-tracker/)**
+## The problem
 
-## Table of Contents
-- [Features](#features)
-- [Use as a Progressive Web App](#use-as-a-progressive-web-app)
-- [Quick Start (GitHub Pages)](#quick-start-github-pages)
-- [Custom Domain](#custom-domain-optional)
-- [Customizing the Icons](#customizing-the-icons)
-- [How It Works](#how-it-works)
-- [Development](#development)
-- [License](#license)
+You signed a lease for, say, 36,000 miles over 3 years. Halfway through, you have no idea if you're on pace, behind, or about to get hit with a $0.25/mile overage charge at lease-end. Most lease apps want you to sign up, hand over your VIN, and look at ads.
+
+## What this does
+
+Enter four things once: lease start date, end date, total miles allowed, and your starting odometer. The app shows you:
+
+- **How many miles per day you can still drive** for the rest of the lease
+- Whether you're **ahead of pace or behind**, in plain miles
+- **Days remaining**, miles used, miles left
+- A simple progress bar comparing miles used vs time elapsed
+
+Tap your odometer once a week (or whenever) to update. That's the whole interaction.
 
 ## Features
 
-- 📊 **Real-time calculations** - See your daily mile allowance based on remaining time and miles
-- 🎯 **Pace tracking** - Know if you're ahead or behind your expected usage
-- 🔗 **Shareable** - Generate links to share lease terms with others (they track their own mileage)
-- 📱 **Installable** - Add to your phone's home screen like a native app
-- 🔒 **Private** - All data stays on your device (localStorage), nothing sent to servers
-- 🌐 **Works offline** - Service worker caches the app for offline use
+- 📊 **Real daily allowance** — recalculates from your actual mileage and remaining days, not from the original lease average
+- 🎯 **Pace tracking** — at-a-glance "you're 1,200 miles under pace" indicator
+- 🔗 **Shareable lease terms** — generate a link for a co-driver or partner; their odometer stays separate
+- 📱 **Installable PWA** — add to your phone's home screen, open like a native app, works offline
+- 🔒 **Truly private** — no signup, no analytics, no servers. Your data lives in your browser and in the URL.
+- 🌐 **Works offline** after first load, thanks to a service worker
+- 🪶 **Single HTML file** — no build step, no dependencies to install, fork-and-deploy in 2 minutes
 
-## Use as a Progressive Web App
+## How your data is stored
 
-A Progressive Web App (PWA) is a website that can be installed on your phone or computer like a regular app. You don't need to download anything from an app store—just visit the site and add it to your home screen.
+This app has no backend. Your data is stored in two places, both on your device:
+
+1. **In the URL itself.** Every time you update your odometer, the page URL updates with your full state encoded as parameters. **Bookmark the page** and you've effectively backed up your data — even if your browser clears site storage, opening the bookmark restores everything.
+2. **In `localStorage`** as a convenience cache, so opening the bare URL also works.
+
+This matters because **Safari and other browsers periodically wipe localStorage** for sites that haven't been opened in ~7 days (Apple's Intelligent Tracking Prevention). Storing state in the URL sidesteps that entirely. The URL is the source of truth.
+
+**TL;DR:** bookmark the page after you set it up. The bookmark is your backup.
+
+## Install as a Progressive Web App (PWA)
+
+A PWA is a website you can install on your phone or computer like a regular app. No app store, no download. Just visit the site and add it to your home screen.
 
 Once installed, Lease Tracker:
 - Opens in its own window (no browser toolbar)
 - Works offline
-- Launches from your home screen or dock with its own icon
+- Launches from your home screen, dock, or Launchpad with its own icon
 
-It's the convenience of a native app without the hassle of app store downloads or updates.
+### iPhone / iPad
 
-### On iPhone/iPad (Safari)
-1. Open your site URL in Safari (not Chrome or another browser—iOS only allows PWA installs from Safari)
-2. Tap the Share button (the square with an arrow pointing up)
-3. Scroll down and tap "Add to Home Screen"
-4. Give it a name (or keep "Lease Tracker") and tap Add
+1. Open [the live demo](https://jordankrueger.github.io/lease-tracker/) in **Safari** (iOS only allows PWA installs from Safari)
+2. Tap the **Share** button (square with arrow pointing up)
+3. Scroll down and tap **Add to Home Screen**
+4. Tap **Add**
 
-Now it appears on your home screen with its own icon, opens without Safari's browser chrome, and works offline.
+### Mac
 
-### On Mac
-
-#### Safari (macOS Sonoma or later):
+**Safari (macOS Sonoma or later):**
 1. Open the site in Safari
-2. Click File → Add to Dock
-3. It now lives in your Dock and opens in its own window
+2. Click **File → Add to Dock**
 
-#### Chrome (any macOS version):
-1. Open the site in Chrome
+**Chrome / Edge / Brave (any version):**
+1. Open the site
 2. Click the three-dot menu (top right)
-3. Click "Install Lease Mileage Tracker..." or Save and Share → Install
-4. It appears in your Applications folder and Launchpad
+3. Click **Install Lease Mileage Tracker** (or **Save and Share → Install**)
+4. The app appears in your Applications folder and Launchpad
 
-### Tips
-- The app caches itself after first load, so it works even without internet
-- Your mileage data stays in that specific browser/install's storage—if you install on both your iPhone and Mac, they'll track separately
-- If you ever need to "reset" the PWA, you can delete it and re-add it from the website
+### Tip
 
-## Quick Start (GitHub Pages)
+Each install (iPhone, Mac, etc.) has its own storage. They don't sync. If you want the same data on multiple devices, share the URL between them — the URL carries the full state.
 
-### Step 1: Create a GitHub Repository
+## Self-host your own copy
 
-1. Go to [github.com/new](https://github.com/new)
-2. Name your repository (e.g., `lease-tracker` or `mileage-tracker`)
-3. Set it to **Public** (required for free GitHub Pages)
-4. Click **Create repository**
+This is a single static HTML file plus an icon and a service worker. Anyone with a free GitHub account can host their own copy in about 2 minutes.
 
-### Step 2: Upload the Files
+### Step 1 — fork or download
 
-**Option A: Upload via GitHub Web Interface**
+Either click **Fork** at the top of this repo, or download the files: `index.html`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`.
 
-1. On your new repo page, click **"uploading an existing file"** or the **Add file → Upload files** button
-2. Drag and drop all files from this folder:
-   - `index.html`
-   - `manifest.json`
-   - `sw.js`
-   - `icon-192.png`
-   - `icon-512.png`
-3. Click **Commit changes**
+### Step 2 — push to a new repo
 
-**Option B: Use Git Command Line**
+If you forked, you're done with this step. Otherwise:
+
+1. Create a new public repo at [github.com/new](https://github.com/new)
+2. Upload all five files to the repo root (drag-and-drop in the GitHub web UI works)
+
+### Step 3 — turn on GitHub Pages
+
+1. In your repo, go to **Settings → Pages**
+2. Under **Source**, pick **Deploy from a branch**
+3. Pick `main` branch, `/ (root)` folder
+4. Save
+
+After a minute or two your app is live at `https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/`.
+
+### Step 4 (optional) — custom domain
+
+1. Add a file named `CNAME` to your repo containing just your domain (e.g. `lease.example.com`)
+2. In your DNS, add a CNAME record pointing to `YOUR_USERNAME.github.io`
+3. In **Settings → Pages**, set the custom domain
+
+## Customize
+
+### Icons
+
+The included icons are simple placeholders. To swap them:
+
+1. Make a 512×512 PNG of your design
+2. Use [favicon.io](https://favicon.io/) or [realfavicongenerator.net](https://realfavicongenerator.net/) to generate the 192×192 version
+3. Replace `icon-192.png` and `icon-512.png`
+
+### Colors / styling
+
+Open `index.html` and edit the Tailwind classes directly. Theme color is `#0f172a` (slate-900) and is set in three places: the `<meta name="theme-color">`, `manifest.json`'s `theme_color`/`background_color`, and the body class.
+
+## URL parameters
+
+You can construct a URL by hand to pre-fill the setup form (handy for sharing or scripted setup):
+
+| Param | Description | Example |
+|---|---|---|
+| `start` | Lease start date (YYYY-MM-DD) | `2024-01-15` |
+| `end` | Lease end date (YYYY-MM-DD) | `2027-01-15` |
+| `miles` | Total miles allowed | `36000` |
+| `startOdo` | Odometer reading at lease start | `15` |
+| `currentOdo` | Current odometer reading | `12500` |
+
+Example backup URL (everything restored, app opens straight to the dashboard):
+
+```
+https://jordankrueger.github.io/lease-tracker/?start=2024-01-15&end=2027-01-15&miles=36000&startOdo=15&currentOdo=12500
+```
+
+The **Share** button inside the app generates a link with everything *except* `currentOdo`, so the recipient sees your lease terms but tracks their own odometer.
+
+## How it works (under the hood)
+
+- **One file:** `index.html` contains the entire app — React 18 (loaded from unpkg), Babel Standalone for in-browser JSX, and Tailwind CSS via CDN. No build step, no `npm install`.
+- **Service worker:** `sw.js` caches the app shell so it works offline after first load. Cache uses relative paths so it works on GitHub Pages subpaths or custom domains without changes.
+- **Persistence:** state is encoded in URL params via `history.replaceState` and mirrored to `localStorage`. The app also calls `navigator.storage.persist()` to ask the browser for durable storage.
+- **No tracking:** no analytics, no fonts from Google, no telemetry. The only third-party requests are to unpkg (React, Babel) and jsdelivr/cdn.tailwindcss.com on first load — and after that the service worker serves them from cache.
+
+## Local development
+
+No build step needed. Open `index.html` in a browser, or for full PWA features (service worker requires a real origin):
 
 ```bash
-# Clone your new empty repo
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-cd YOUR_REPO_NAME
-
-# Copy all the app files into this folder, then:
-git add .
-git commit -m "Initial commit - Lease Tracker app"
-git push origin main
+npx serve .
 ```
-
-### Step 3: Enable GitHub Pages
-
-1. Go to your repository on GitHub
-2. Click **Settings** (tab at the top)
-3. Scroll down to **Pages** in the left sidebar
-4. Under **Source**, select **Deploy from a branch**
-5. Under **Branch**, select `main` and `/ (root)`
-6. Click **Save**
-
-### Step 4: Access Your App
-
-After a minute or two, your app will be live at:
-
-```
-https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/
-```
-
-For example: `https://jordankrueger.github.io/lease-tracker/`
-
-## Custom Domain (Optional)
-
-If you want to use a custom domain like `lease.yourdomain.com`:
-
-1. In your repo, create a file called `CNAME` containing just your domain:
-   ```
-   lease.yourdomain.com
-   ```
-2. In your DNS settings, add a CNAME record pointing to `YOUR_USERNAME.github.io`
-3. In GitHub Pages settings, enter your custom domain
-
-## Customizing the Icons
-
-The included icons are simple placeholders. To create custom icons:
-
-1. Create a 512x512 PNG image with your design
-2. Use a tool like [favicon.io](https://favicon.io/) or [realfavicongenerator.net](https://realfavicongenerator.net/) to generate all sizes
-3. Replace `icon-192.png` and `icon-512.png` in your repo
-
-## How It Works
-
-### Data Storage
-- Lease configuration and current mileage are stored in your browser's `localStorage`
-- Data persists across sessions but is device-specific
-- Clearing browser data will reset the app
-
-### Sharing
-- The Share button generates a URL with lease parameters (dates, total miles, starting odometer)
-- When someone opens a shared link, those values pre-fill the setup form
-- Each person's mileage entries stay on their own device
-
-### URL Parameters
-You can manually construct URLs with these parameters:
-- `start` - Lease start date (YYYY-MM-DD)
-- `end` - Lease end date (YYYY-MM-DD)  
-- `miles` - Total miles allowed
-- `startOdo` - Odometer reading at lease start
-
-Example:
-```
-https://yoursite.com/?start=2024-01-15&end=2027-01-15&miles=36000&startOdo=15
-```
-
-## Development
-
-This is a single-page app with no build step required. To modify:
-
-1. Edit `index.html` - contains all React code inline
-2. Test locally by opening `index.html` in a browser (some features like service worker need a local server)
-3. For local testing with full PWA features:
-   ```bash
-   npx serve .
-   ```
 
 ## License
 
-[GNU General Public License v3.0](https://choosealicense.com/licenses/gpl-3.0/) - Permissions of this strong copyleft license are conditioned on making available complete source code of licensed works and modifications, which include larger works using a licensed work, under the same license. Copyright and license notices must be preserved. Contributors provide an express grant of patent rights.
+[GNU General Public License v3.0](https://choosealicense.com/licenses/gpl-3.0/) — fork it, modify it, deploy your own. Improvements via pull request welcome.
 
 ---
 
-Built with React, Tailwind CSS, and localStorage. No backend required.
+Built with React, Tailwind, and a single HTML file. No backend. No signup. No nonsense.
