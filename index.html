@@ -95,39 +95,53 @@
 
         const urlHasSetup = params.get('start') && params.get('end') && params.get('miles');
 
+        // Parse stored data once and check if its lease terms match the URL.
+        let storedData = null;
+        let storedMatchesUrl = false;
+        if (stored) {
+          try { storedData = JSON.parse(stored); } catch (_) { storedData = null; }
+        }
+        if (storedData && urlHasSetup) {
+          storedMatchesUrl =
+            storedData.startDate === params.get('start') &&
+            storedData.endDate === params.get('end') &&
+            storedData.totalMiles === parseInt(params.get('miles'));
+        }
+
         if (urlHasSetup) {
-          const urlData = {
+          // Prefer the URL value when explicitly provided; fall back to stored when the
+          // URL omitted it (e.g. an older share link without startOdo) so we don't
+          // silently zero out the real starting odometer.
+          const startingMileage = params.get('startOdo') !== null
+            ? parseInt(params.get('startOdo'))
+            : (storedMatchesUrl ? storedData.startingMileage : 0);
+
+          const leaseFromUrl = {
             startDate: params.get('start'),
             endDate: params.get('end'),
             totalMiles: parseInt(params.get('miles')),
-            startingMileage: parseInt(params.get('startOdo') || '0')
+            startingMileage: startingMileage
           };
 
-          setLeaseData(urlData);
+          setLeaseData(leaseFromUrl);
           setSetupForm({
-            startDate: urlData.startDate,
-            endDate: urlData.endDate,
-            totalMiles: urlData.totalMiles.toString(),
-            startingMileage: urlData.startingMileage.toString(),
-            currentMileage: params.get('currentOdo') || ''
+            startDate: leaseFromUrl.startDate,
+            endDate: leaseFromUrl.endDate,
+            totalMiles: leaseFromUrl.totalMiles.toString(),
+            startingMileage: leaseFromUrl.startingMileage.toString(),
+            currentMileage: params.get('currentOdo') ||
+              (storedMatchesUrl ? storedData.currentMileage.toString() : '')
           });
 
           // currentOdo in URL → restore everything from URL (the bookmark IS the backup)
           if (params.get('currentOdo')) {
             setCurrentMileage(parseInt(params.get('currentOdo')));
             setShowSetup(false);
-          } else if (stored) {
-            // Lease terms in URL but no currentOdo: pull mileage from localStorage if it matches.
-            const storedData = JSON.parse(stored);
-            if (storedData.startDate === urlData.startDate &&
-                storedData.endDate === urlData.endDate &&
-                storedData.totalMiles === urlData.totalMiles) {
-              setCurrentMileage(storedData.currentMileage);
-              setShowSetup(false);
-            }
+          } else if (storedMatchesUrl) {
+            setCurrentMileage(storedData.currentMileage);
+            setShowSetup(false);
           }
-        } else if (stored) {
-          const storedData = JSON.parse(stored);
+        } else if (storedData) {
           setLeaseData(storedData);
           setCurrentMileage(storedData.currentMileage);
           setShowSetup(false);
