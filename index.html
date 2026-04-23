@@ -81,32 +81,47 @@
         currentMileage: ''
       });
 
+      // Ask the browser to mark our storage as durable so it's less likely to be evicted.
+      // Most browsers grant this for installed PWAs and frequently-used sites.
+      useEffect(() => {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persist().catch(() => {});
+        }
+      }, []);
+
       useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const stored = localStorage.getItem('leaseTrackerData');
-        
-        if (params.get('start') && params.get('end') && params.get('miles')) {
+
+        const urlHasSetup = params.get('start') && params.get('end') && params.get('miles');
+
+        if (urlHasSetup) {
           const urlData = {
             startDate: params.get('start'),
             endDate: params.get('end'),
             totalMiles: parseInt(params.get('miles')),
             startingMileage: parseInt(params.get('startOdo') || '0')
           };
-          
+
+          setLeaseData(urlData);
           setSetupForm({
             startDate: urlData.startDate,
             endDate: urlData.endDate,
             totalMiles: urlData.totalMiles.toString(),
             startingMileage: urlData.startingMileage.toString(),
-            currentMileage: ''
+            currentMileage: params.get('currentOdo') || ''
           });
-          
-          if (stored) {
+
+          // currentOdo in URL → restore everything from URL (the bookmark IS the backup)
+          if (params.get('currentOdo')) {
+            setCurrentMileage(parseInt(params.get('currentOdo')));
+            setShowSetup(false);
+          } else if (stored) {
+            // Lease terms in URL but no currentOdo: pull mileage from localStorage if it matches.
             const storedData = JSON.parse(stored);
-            if (storedData.startDate === urlData.startDate && 
+            if (storedData.startDate === urlData.startDate &&
                 storedData.endDate === urlData.endDate &&
                 storedData.totalMiles === urlData.totalMiles) {
-              setLeaseData(storedData);
               setCurrentMileage(storedData.currentMileage);
               setShowSetup(false);
             }
@@ -119,10 +134,25 @@
         }
       }, []);
 
+      // Keep the URL in sync with current state so the address bar (and any bookmark made
+      // from it) carries the full backup. Survives localStorage eviction.
       useEffect(() => {
-        if (leaseData && currentMileage) {
-          const dataToStore = { ...leaseData, currentMileage: parseInt(currentMileage) };
+        if (leaseData && currentMileage !== '' && currentMileage != null) {
+          const mileageInt = parseInt(currentMileage);
+          const dataToStore = { ...leaseData, currentMileage: mileageInt };
           localStorage.setItem('leaseTrackerData', JSON.stringify(dataToStore));
+
+          const params = new URLSearchParams({
+            start: leaseData.startDate,
+            end: leaseData.endDate,
+            miles: leaseData.totalMiles,
+            startOdo: leaseData.startingMileage,
+            currentOdo: mileageInt
+          });
+          const newSearch = '?' + params.toString();
+          if (window.location.search !== newSearch) {
+            window.history.replaceState({}, '', window.location.pathname + newSearch);
+          }
         }
       }, [leaseData, currentMileage]);
 
@@ -477,6 +507,10 @@
                     <span>{leaseData.totalMiles.toLocaleString()} miles</span>
                   </div>
                 </div>
+
+                <p className="text-center text-slate-500 text-xs mt-4 px-4">
+                  💡 Bookmark this page — your data lives in the URL, so it survives if your browser clears site data.
+                </p>
               </>
             )}
 
@@ -484,9 +518,9 @@
             {showShareModal && (
               <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50" onClick={() => setShowShareModal(false)}>
                 <div className="bg-slate-800 rounded-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
-                  <h3 className="text-lg font-bold mb-2">Share This Tracker</h3>
+                  <h3 className="text-lg font-bold mb-2">Share Your Lease Terms</h3>
                   <p className="text-slate-400 text-sm mb-4">
-                    Share this link with others who have the same lease terms. They'll be able to track their own mileage separately.
+                    Share this link with others who have the same lease terms — start date, end date, total miles. They'll track their own odometer separately.
                   </p>
                   <div className="bg-slate-900 rounded-lg p-3 text-xs text-slate-300 break-all mb-4 select-all">
                     {generateShareUrl()}
