@@ -67,6 +67,15 @@
     const INSTALL_DISMISS_KEY = 'pwaInstallDismissedAt';
     const INSTALL_DISMISS_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+    // Safe localStorage helpers. Safari private mode and environments with
+    // storage disabled throw on access, which would crash the app otherwise.
+    const safeGetItem = (key) => {
+      try { return localStorage.getItem(key); } catch (_) { return null; }
+    };
+    const safeSetItem = (key, value) => {
+      try { localStorage.setItem(key, value); } catch (_) { /* ignore */ }
+    };
+
     // Capture beforeinstallprompt at module scope so the event (which only fires
     // once) survives React remounts when the app transitions between setup and
     // dashboard views.
@@ -81,7 +90,7 @@
     window.addEventListener('appinstalled', () => {
       capturedInstallPrompt = null;
       installedFlag = true;
-      try { localStorage.setItem(INSTALL_DISMISS_KEY, new Date().toISOString()); } catch (_) {}
+      safeSetItem(INSTALL_DISMISS_KEY, new Date().toISOString());
       installSubs.forEach((fn) => fn('installed'));
     });
 
@@ -97,7 +106,7 @@
           window.navigator.standalone === true;
         if (isStandalone || installedFlag) return;
 
-        const dismissedAt = localStorage.getItem(INSTALL_DISMISS_KEY);
+        const dismissedAt = safeGetItem(INSTALL_DISMISS_KEY);
         if (dismissedAt) {
           const age = Date.now() - new Date(dismissedAt).getTime();
           if (!isNaN(age) && age < INSTALL_DISMISS_MS) return;
@@ -132,7 +141,7 @@
 
       const dismiss = () => {
         setHidden(true);
-        localStorage.setItem(INSTALL_DISMISS_KEY, new Date().toISOString());
+        safeSetItem(INSTALL_DISMISS_KEY, new Date().toISOString());
       };
 
       const handleInstall = async () => {
